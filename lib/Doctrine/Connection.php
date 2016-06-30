@@ -576,6 +576,7 @@ abstract class Doctrine_Connection extends Doctrine_Configurable implements Coun
         if (empty($keys)) {
             throw new Doctrine_Connection_Exception('Not specified which fields are keys');
         }
+        $dbName = $table->createQuery()->getDbnameForComponent($table->getComponentName());
         $identifier = (array) $table->getIdentifier();
         $condition = array();
 
@@ -590,7 +591,7 @@ abstract class Doctrine_Connection extends Doctrine_Configurable implements Coun
 
         $affectedRows = 0;
         if ( ! empty($condition) && ! empty($conditionValues)) {
-            $query = 'DELETE FROM ' . $this->quoteIdentifier($table->getTableName())
+            $query = 'DELETE FROM ' . ($dbName ? $this->quoteIdentifier($dbName) . '.' : '') . $this->quoteIdentifier($table->getTableName())
                     . ' WHERE ' . implode(' AND ', $condition);
 
             $affectedRows = $this->exec($query, $conditionValues);
@@ -614,13 +615,14 @@ abstract class Doctrine_Connection extends Doctrine_Configurable implements Coun
     public function delete(Doctrine_Table $table, array $identifier)
     {
         $tmp = array();
-
+        $dbName = $table->createQuery()->getDbnameForComponent($table->getComponentName());
+        
         foreach (array_keys($identifier) as $id) {
             $tmp[] = $this->quoteIdentifier($table->getColumnName($id)) . ' = ?';
         }
 
         $query = 'DELETE FROM '
-               . $this->quoteIdentifier($table->getTableName())
+               . ($dbName ? $this->quoteIdentifier($dbName) . '.' : '') . $this->quoteIdentifier($table->getTableName())
                . ' WHERE ' . implode(' AND ', $tmp);
 
         return $this->exec($query, array_values($identifier));
@@ -640,7 +642,7 @@ abstract class Doctrine_Connection extends Doctrine_Configurable implements Coun
         if (empty($fields)) {
             return false;
         }
-
+        $dbName = $table->createQuery()->getDbnameForComponent($table->getComponentName());
         $set = array();
         foreach ($fields as $fieldName => $value) {
             if ($value instanceof Doctrine_Expression) {
@@ -653,7 +655,7 @@ abstract class Doctrine_Connection extends Doctrine_Configurable implements Coun
 
         $params = array_merge(array_values($fields), array_values($identifier));
 
-        $sql  = 'UPDATE ' . $this->quoteIdentifier($table->getTableName())
+        $sql  = 'UPDATE ' . ($dbName ? $this->quoteIdentifier($dbName) . '.' : '') . $this->quoteIdentifier($table->getTableName())
               . ' SET ' . implode(', ', $set)
               . ' WHERE ' . implode(' = ? AND ', $this->quoteMultipleIdentifier($table->getIdentifierColumnNames()))
               . ' = ?';
@@ -671,6 +673,7 @@ abstract class Doctrine_Connection extends Doctrine_Configurable implements Coun
      */
     public function insert(Doctrine_Table $table, array $fields)
     {
+        $dbName = $table->createQuery()->getDbnameForComponent($table->getComponentName());
         $tableName = $table->getTableName();
 
         // column names are specified as array keys
@@ -688,7 +691,7 @@ abstract class Doctrine_Connection extends Doctrine_Configurable implements Coun
         }
 
         // build the statement
-        $query = 'INSERT INTO ' . $this->quoteIdentifier($tableName)
+        $query = 'INSERT INTO ' . ($dbName ? $this->quoteIdentifier($dbName) . '.' : '') . $this->quoteIdentifier($tableName)
                 . ' (' . implode(', ', $cols) . ')'
                 . ' VALUES (' . implode(', ', $a) . ')';
 

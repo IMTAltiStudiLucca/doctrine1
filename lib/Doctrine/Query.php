@@ -1680,6 +1680,14 @@ class Doctrine_Query extends Doctrine_Query_Abstract implements Countable
         return $this;
     }
 
+    public function getDbnameForComponent($name) {
+        $manager = Doctrine_Manager::getInstance();
+        $componentConn = $manager->getConnectionForComponent($name);
+
+        $dsn = $componentConn->getOption('dsn');
+        return preg_match('/dbname=([^;\Z]+)/', $dsn, $m) ? $m[1] : null;
+    }
+    
     /**
      * @todo Describe & refactor... too long and nested.
      * @param string $path          component alias
@@ -1781,9 +1789,15 @@ class Doctrine_Query extends Doctrine_Query_Abstract implements Countable
                 $localAlias   = $this->getSqlTableAlias($parent, $localTable->getTableName());
                 $foreignAlias = $this->getSqlTableAlias($componentAlias, $relation->getTable()->getTableName());
 
+                $dbName = $this->getDbnameForComponent($relation->getTable()->getComponentName());
+                
                 $foreignSql   = $this->_conn->quoteIdentifier($relation->getTable()->getTableName())
                               . ' '
                               . $this->_conn->quoteIdentifier($foreignAlias);
+                
+                if ($dbName) {
+                    $foreignSql = $this->_conn->quoteIdentifier($dbName) . '.' . $foreignSql;
+                }
 
                 $map = $relation->getTable()->inheritanceMap;
 
@@ -1871,7 +1885,10 @@ class Doctrine_Query extends Doctrine_Query_Abstract implements Countable
 
     protected function buildSimpleRelationSql(Doctrine_Relation $relation, $foreignAlias, $localAlias, $overrideJoin, $join)
     {
-        $queryPart = $join . $this->_conn->quoteIdentifier($relation->getTable()->getTableName())
+        $dbName = $this->getDbnameForComponent($relation->getTable()->getComponentName());
+        
+        $queryPart = $join . ($dbName ? $this->_conn->quoteIdentifier($dbName) . '.' : '')
+                           . $this->_conn->quoteIdentifier($relation->getTable()->getTableName())
                            . ' '
                            . $this->_conn->quoteIdentifier($foreignAlias);
 
@@ -1963,7 +1980,9 @@ class Doctrine_Query extends Doctrine_Query_Abstract implements Countable
         if ( ! $this->_passedConn && $manager->hasConnectionForComponent($name)) {
             $this->_conn = $manager->getConnectionForComponent($name);
         }
-
+        
+        $dbName = $this->getDbnameForComponent($name);
+        
         $table = $this->_conn->getTable($name);
         $tableName = $table->getTableName();
 
@@ -1971,6 +1990,9 @@ class Doctrine_Query extends Doctrine_Query_Abstract implements Countable
         $tableAlias = $this->getSqlTableAlias($componentAlias, $tableName);
         // quote table name
         $queryPart = $this->_conn->quoteIdentifier($tableName);
+        if ($dbName) {
+            $queryPart = $this->_conn->quoteIdentifier($dbName) . '.' . $queryPart;
+        }
 
         if ($this->_type === self::SELECT) {
             $queryPart .= ' ' . $this->_conn->quoteIdentifier($tableAlias);

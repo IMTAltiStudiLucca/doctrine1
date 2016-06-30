@@ -200,13 +200,14 @@ class Doctrine_Connection_Mysql extends Doctrine_Connection_Common
         $columns = array();
         $values = array();
         $params = array();
+        $dbName = $table->createQuery()->getDbnameForComponent($table->getComponentName());
         foreach ($fields as $fieldName => $value) {
             $columns[] = $table->getColumnName($fieldName);
             $values[] = '?';
             $params[] = $value;
         }
 
-        $query = 'REPLACE INTO ' . $this->quoteIdentifier($table->getTableName()) . ' (' . implode(',', $columns) . ') VALUES (' . implode(',', $values) . ')';
+        $query = 'REPLACE INTO ' . ($dbName ? $this->quoteIdentifier($dbName) . '.' : '') . $this->quoteIdentifier($table->getTableName()) . ' (' . implode(',', $columns) . ') VALUES (' . implode(',', $values) . ')';
 
         return $this->exec($query, $params);
     }
