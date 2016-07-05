@@ -1,5 +1,7 @@
 <?php
 
+include_once(dirname(__FILE__) . '/Doctrine/Core.php');
+
 /**
  * Created by PhpStorm.
  * User: carta
